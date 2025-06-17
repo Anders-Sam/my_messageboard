@@ -1,0 +1,12 @@
+{% extends 'base.html' %} {# 假設你有一個 base.html 基礎模板 #}
+
+{% block title %}發布留言{% endblock %}
+
+{% block content %}
+    <h2>發布留言</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">提交留言</button>
+    </form>
+{% endblock %}

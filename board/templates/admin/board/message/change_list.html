@@ -1,0 +1,26 @@
+{# board/templates/admin/board/message/change_list.html #}
+{% extends 'admin/change_list.html' %}
+
+{% block object-tools-items %}
+    {{ block.super }}
+    {# 快速通過全部留言按鈕 #}
+    {% if pending_messages_count %}
+        <a href="{% url 'admin:approve_all_pending' %}" class="addlink" style="background-color: green; color: white; padding: 5px 10px; border-radius: 5px; margin-left: 10px;">
+            快速通過全部留言 ({{ pending_messages_count }} 條)
+        </a>
+        {# 額外提示未審核數量，可以在其他地方顯示，這裡僅為範例 #}
+        <p style="display:inline-block; margin-left: 10px; font-weight: bold;">
+            當前有 {{ pending_messages_count }} 條留言待審核。
+        </p>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {# 可以在這裡再次强調未審核數量 #}
+    {% if pending_messages_count > 0 %}
+        <p style="color: orange; font-weight: bold;">
+            有 {{ pending_messages_count }} 條留言尚未通過審核。
+        </p>
+    {% endif %}
+    {{ block.super }}
+{% endblock %}

@@ -1,0 +1,21 @@
+{# board/templates/admin/approve_all_pending_confirmation.html #}
+{% extends 'admin/base_site.html' %}
+{% load i18n admin_urls static %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='board' %}">留言板</a>
+    &rsaquo; <a href="{% url 'admin:board_message_changelist' %}">留言</a>
+    &rsaquo; 快速通過全部留言
+</div>
+{% endblock %}
+
+{% block content %}
+<p>您確定要通過所有 {{ pending_count }} 條未審核的留言嗎？</p>
+<form method="post" action="{% url 'admin:approve_all_pending' %}">
+    {% csrf_token %}
+    <input type="submit" value="確認通過" class="button" />
+    <a href="{% url 'admin:board_message_changelist' %}" class="button cancel-link">取消</a>
+</form>
+{% endblock %}
