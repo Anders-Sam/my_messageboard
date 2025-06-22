@@ -81,9 +81,14 @@ class MessageAdmin(admin.ModelAdmin):
     # 添加自定義的 URL 路由
     def get_urls(self):
         urls = super().get_urls()
+        info = self.model._meta.app_label, self.model._meta.model_name
         custom_urls = [
-            path('<int:message_id>/approve/', self.admin_site.admin_view(self.approve_message_view), name='message_approve'), # 更新視圖名稱
-            path('approve_all_pending/', self.admin_site.admin_view(self.approve_all_pending_view), name='approve_all_pending'), # 更新視圖名稱
+            path('<int:message_id>/approve/',
+                 self.admin_site.admin_view(self.approve_message_view),
+                 name=f'{info[0]}_{info[1]}_approve'),
+            path('approve_all_pending/',
+                 self.admin_site.admin_view(self.approve_all_pending_view),
+                 name=f'{info[0]}_{info[1]}_approve_all_pending'),
         ]
         return custom_urls + urls
 
