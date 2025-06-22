@@ -1,40 +1,128 @@
 {% extends 'base.html' %}
+{% load static %} {# 載入 static 標籤以便使用靜態文件 #}
 
-{% block title %}留言列表{% endblock %}
+{% block title %}留言列表 - {{ block.super }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .message-card {
+        margin-bottom: 1.5rem;
+        border: 1px solid #e0e0e0;
+        border-radius: 0.25rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,.05);
+    }
+    .message-card .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e0e0e0;
+        font-weight: bold;
+    }
+    .message-card .card-body {
+        padding: 1.25rem;
+    }
+    .message-card .card-footer {
+        background-color: #f8f9fa;
+        border-top: 1px solid #e0e0e0;
+        font-size: 0.875em;
+        color: #6c757d;
+    }
+    .pagination .page-link {
+        color: #007bff;
+    }
+    .pagination .page-item.active .page-link {
+        z-index: 1;
+        color: #fff;
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-    <h2>已審核留言</h2>
-    {% if page_obj %}
-        <ul>
-            {% for message in page_obj %}
-                <li>
-                    <strong>{{ message.subject }}</strong> - By {{ message.author.username }} on {{ message.created_at|date:"Y-m-d H:i" }}
-                    <p>{{ message.content|linebreaksbr }}</p>
-                </li>
-                <hr>
-            {% endfor %}
-        </ul>
-
-        <div class="pagination">
-            <span class="step-links">
-                {% if page_obj.has_previous %}
-                    <a href="?page=1">&laquo; 第一頁</a>
-                    <a href="?page={{ page_obj.previous_page_number }}">上一頁</a>
-                {% endif %}
-
-                <span class="current">
-                    第 {{ page_obj.number }} 頁，共 {{ page_obj.paginator.num_pages }} 頁。
-                </span>
-
-                {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}">下一頁</a>
-                    <a href="?page={{ page_obj.paginator.num_pages }}">最後頁 &raquo;</a>
-                {% endif %}
-            </span>
-        </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">留言板</h2>
+    {% if user.is_authenticated %}
+        <a href="{% url 'post_message' %}" class="btn btn-primary">
+            <i class="fas fa-plus-circle"></i> 發布新留言
+        </a>
     {% else %}
-        <p>目前還没有已審核的留言。</p>
+        <a href="{% url 'login' %}" class="btn btn-outline-primary">登入後發布留言</a>
     {% endif %}
+</div>
 
-    <p><a href="{% url 'post_message' %}">發布新留言</a></p>
+{% if page_obj %}
+    {% for message in page_obj %}
+    <div class="card message-card">
+        <div class="card-header">
+            {{ message.subject }}
+        </div>
+        <div class="card-body">
+            <p class="card-text">{{ message.content|linebreaksbr }}</p>
+        </div>
+        <div class="card-footer text-muted">
+            由 <strong>{{ message.author.username }}</strong> 於 {{ message.created_at|date:"Y年m月d日 H:i" }} 發布
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="留言分頁">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1" aria-label="第一頁">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="上一頁">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link" aria-hidden="true">&laquo;&laquo;</span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link" aria-hidden="true">&laquo;</span>
+                </li>
+            {% endif %}
+
+            {% for i in page_obj.paginator.page_range %}
+                {% if page_obj.number == i %}
+                    <li class="page-item active" aria-current="page"><span class="page-link">{{ i }}</span></li>
+                {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                    <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+                {% elif i == page_obj.number|add:'-3' or i == page_obj.number|add:'3' %}
+                     <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="下一頁">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="最後頁">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link" aria-hidden="true">&raquo;</span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link" aria-hidden="true">&raquo;&raquo;</span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+{% else %}
+    <div class="alert alert-info" role="alert">
+        目前還沒有已審核的留言。{% if user.is_authenticated %}快來 <a href="{% url 'post_message' %}" class="alert-link">發布第一條留言</a>吧！{% else %}請 <a href="{% url 'login' %}" class="alert-link">登入</a> 後發布留言。{% endif %}
+    </div>
+{% endif %}
+
 {% endblock %}

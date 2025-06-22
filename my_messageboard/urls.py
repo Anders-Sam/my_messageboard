@@ -17,12 +17,19 @@ Including another URLconf
 # my_messageboard/urls.py
 from django.contrib import admin
 from django.urls import path, include
-from board import views # 導入應用視
+from board import views as board_views # 導入應用視圖，並使用別名以區分
+from django.contrib.auth import views as auth_views # 導入 Django 內建的認證視圖
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('accounts/', include('django.contrib.auth.urls')), # Django 認證系統的 URL
-    path('', views.message_list, name='message_list'), # 留言列表頁
-    path('post/', views.post_message, name='post_message'), # 發布留言頁
+    path('accounts/login/', auth_views.LoginView.as_view(), name='login'), # 登入
+    path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'), # 登出
+    path('accounts/password_reset/', auth_views.PasswordResetView.as_view(), name='password_reset'), # 密碼重設請求
+    path('accounts/password_reset/done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'), # 密碼重設郵件已發送
+    path('accounts/reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'), # 密碼重設確認
+    path('accounts/reset/done/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'), # 密碼重設完成
+    path('accounts/signup/', board_views.signup, name='signup'), # 註冊，假設在 board.views 中實現 signup 視圖
+    path('', board_views.message_list, name='message_list'), # 留言列表頁
+    path('post/', board_views.post_message, name='post_message'), # 發布留言頁
     path('captcha/', include('captcha.urls')), # 驗證碼 URL
 ]

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}註冊{% endblock %}
+
+{% block content %}
+<h2>註冊新帳戶</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">註冊</button>
+</form>
+<p><a href="{% url 'login' %}">已經有帳戶了？請登入</a></p>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" type="text/css" href="{% static "admin/css/forms.css" %}">{% endblock %}
+
+{% block coltype %}colM{% endblock %}
+
+{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} delete-confirmation{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    {% if pending_count > 0 %}
+    <form method="post">{% csrf_token %}
+        <div>
+            <p>{% blocktrans %}您確定要快速通過所有 {{ pending_count }} 條未審核的留言嗎？{% endblocktrans %}</p>
+            <p>{% blocktrans %}通過後，系統將嘗試向留言者發送郵件通知（如果他們提供了電子郵件地址）。{% endblocktrans %}</p>
+            <input type="hidden" name="post" value="yes">
+            <input type="submit" value="{% trans '是的，我確定' %}">
+            <a href="{% url opts|admin_urlname:'changelist' %}" class="button cancel-link">{% trans "不，返回" %}</a>
+        </div>
+    </form>
+    {% else %}
+        <p>{% trans "目前沒有未審核的留言。" %}</p>
+        <a href="{% url opts|admin_urlname:'changelist' %}" class="button cancel-link">{% trans "返回列表" %}</a>
+    {% endif %}
+</div>
+{% endblock %}

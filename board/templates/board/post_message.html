@@ -1,12 +1,118 @@
-{% extends 'base.html' %} {# 假設你有一個 base.html 基礎模板 #}
+{% extends 'base.html' %}
 
-{% block title %}發布留言{% endblock %}
+{% block title %}發布新留言 - {{ block.super }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    .captcha img { /* 驗證碼圖片樣式 */
+        margin-bottom: 5px;
+        border-radius: .25rem;
+    }
+    .captcha input[type="text"] { /* 驗證碼輸入框 */
+        max-width: 150px; /* 限制寬度，使其更緊湊 */
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-    <h2>發布留言</h2>
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">提交留言</button>
-    </form>
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h2 class="mb-0 h4">撰寫新留言</h2>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {# 顯示非字段錯誤 (例如表單級別的驗證錯誤) #}
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    {# 逐個渲染字段以獲得更好的控制 #}
+                    <div class="mb-3">
+                        <label for="{{ form.subject.id_for_label }}" class="form-label">{{ form.subject.label }}</label>
+                        {{ form.subject }}
+                        {% if form.subject.help_text %}
+                            <small class="form-text text-muted">{{ form.subject.help_text }}</small>
+                        {% endif %}
+                        {% for error in form.subject.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.content.id_for_label }}" class="form-label">{{ form.content.label }}</label>
+                        {{ form.content }}
+                        {% if form.content.help_text %}
+                            <small class="form-text text-muted">{{ form.content.help_text }}</small>
+                        {% endif %}
+                        {% for error in form.content.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    {# 處理驗證碼字段 #}
+                    <div class="mb-3 captcha">
+                        <label for="{{ form.captcha.id_for_label }}" class="form-label">{{ form.captcha.label }}</label>
+                        {{ form.captcha }} {# 這會渲染圖片和輸入框 #}
+                         {% if form.captcha.help_text %}
+                            <small class="form-text text-muted">{{ form.captcha.help_text }}</small>
+                        {% endif %}
+                        {% for error in form.captcha.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-paper-plane"></i> 提交留言
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center">
+                <a href="{% url 'message_list' %}">返回留言列表</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 給表單字段添加 Bootstrap class
+document.addEventListener('DOMContentLoaded', function() {
+    const fields = ['subject', 'content']; // 需要添加 form-control class 的字段
+    fields.forEach(function(fieldName) {
+        const field = document.getElementById('id_' + fieldName);
+        if (field) {
+            field.classList.add('form-control');
+            // 處理錯誤時的 is-invalid class
+            const errorDiv = field.closest('div').querySelector('.invalid-feedback');
+            if (errorDiv && errorDiv.textContent.trim() !== '') {
+                field.classList.add('is-invalid');
+            }
+        }
+    });
+    // 驗證碼輸入框樣式
+    const captchaInput = document.getElementById('id_captcha_1');
+    if (captchaInput) {
+        captchaInput.classList.add('form-control');
+        const errorDiv = captchaInput.closest('div.captcha').querySelector('.invalid-feedback');
+        if (errorDiv && errorDiv.textContent.trim() !== '') {
+            captchaInput.classList.add('is-invalid');
+        }
+    }
+});
+</script>
 {% endblock %}
