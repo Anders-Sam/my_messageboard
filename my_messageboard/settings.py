@@ -85,7 +85,7 @@ WSGI_APPLICATION = 'my_messageboard.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': BASE_DIR / 'db_init_v1.sqlite3', # Updated database filename
     }
 }
 

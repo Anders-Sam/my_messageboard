@@ -15,7 +15,9 @@ class MessageAdmin(admin.ModelAdmin):
     list_filter = ('is_approved', 'notified', 'author__username') # 增加 author__username 過濾
     search_fields = ('subject', 'content', 'author__username', 'author__email') # 增加 author__email 搜尋
     actions = ['mark_approved_and_notify', 'mark_unapproved'] # 修改批量操作名稱
-    readonly_fields = ('author', 'subject', 'content', 'created_at') # 設置部分欄位為唯讀
+    readonly_fields = ('author', 'subject', 'content', 'created_at') # 恢復 subject 和 content 為唯讀
+    list_display_links = ('subject',) # 明確指定 subject 作為連結
+
 
     # 顯示留言者 Email
     def author_email(self, obj):
