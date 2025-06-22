@@ -1,0 +1,22 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls static %}
+
+{% block object-tools-items %}
+    {{ block.super }}
+    {% if change and not original.is_approved and perms.board.change_message %}
+        <li>
+            <a href="{% url opts|admin_urlname:'approve' original.pk|admin_urlquote %}" class="button">
+                {% trans "審核通過並通知" %}
+            </a>
+        </li>
+    {% endif %}
+{% endblock %}
+
+{% block submit_buttons_bottom %}
+    {{ block.super }}
+    {% if change and not original.is_approved and perms.board.change_message %}
+        <div class="submit-row">
+            <input type="submit" value="{% trans '審核通過並通知 (保存後)' %}" name="_approve_and_notify_after_save">
+        </div>
+    {% endif %}
+{% endblock %}

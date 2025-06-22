@@ -132,16 +132,24 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # my_messageboard/settings.py
-# Email configuration (Example for Gmail SMTP)
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com' # 或你的SMTP服務器
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'your_email@gmail.com' # 你的電子郵件
-EMAIL_HOST_PASSWORD = 'your_email_password' # 你的電子郵件密碼或應用密碼
-DEFAULT_FROM_EMAIL = 'your_email@gmail.com' # 發件人郵箱
+# Email configuration
+# 默認使用控制台後端進行測試，避免在沒有配置 SMTP 的情況下出錯
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# 注意：在生產還境中，请使用還境變量或其他安全方式存儲密碼，不要直接硬编碼。
+# 實際 SMTP 配置 (如果需要發送真實郵件，請取消註釋並填寫)
+# EMAIL_HOST = 'smtp.gmail.com' # 例如：Gmail
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER') # 強烈建議使用環境變量
+# EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD') # 強烈建議使用環境變量
+# DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'webmaster@localhost') # 默認發件人
+
+# 管理員郵箱配置，用於接收 mail_admins() 的郵件
+ADMINS = [('Admin', os.environ.get('ADMIN_EMAIL'))] if os.environ.get('ADMIN_EMAIL') else []
+MANAGERS = ADMINS
+
+# 注意：在生產環境中，請務必使用環境變量或其他安全方式存儲敏感信息如郵箱密碼。
 # 如果使用Gmail，可能需要開啟“允許安全性較低的應用”或生成應用專用密碼。
 
 LOGIN_REDIRECT_URL = '/' # 登入成功後重定向到網站首頁 (留言列表頁)
+LOGOUT_REDIRECT_URL = '/' # 登出成功後重定向到網站首頁
