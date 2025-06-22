@@ -111,7 +111,9 @@ Django 使用遷移來管理數據庫結構。
     ```bash
     python manage.py migrate
     ```
-    這將創建項目所需的數據庫表（默認為 `db.sqlite3` 文件）。
+    這將創建項目所需的數據庫表。根據 `my_messageboard/settings.py` 中的配置，SQLite 數據庫文件名默認為 `db_init_v1.sqlite3`。
+    *   **首次設置**：如果 `db_init_v1.sqlite3` 文件不存在，Django 會自動創建它。
+    *   **從舊版本遷移 (如果原使用 `db.sqlite3`)**：如果您是從一個使用 `db.sqlite3` 作為數據庫文件的舊版本項目更新而來，請確保在運行 `migrate` 命令**之前**，已將您現有的 `db.sqlite3` 文件手動重命名為 `db_init_v1.sqlite3`，以保留數據。否則，將創建一個新的空數據庫。
 
 ### 3.6. 創建超級使用者 (管理員帳戶)
 
