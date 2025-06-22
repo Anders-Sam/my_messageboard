@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}編輯留言 - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning text-dark"> {# Changed to warning color for editing #}
+                <h2 class="mb-0 h4">編輯您的留言</h2>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="{{ form.subject.id_for_label }}" class="form-label">{{ form.subject.label }}</label>
+                        {{ form.subject }}
+                        {% if form.subject.help_text %}
+                            <small class="form-text text-muted">{{ form.subject.help_text }}</small>
+                        {% endif %}
+                        {% for error in form.subject.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.content.id_for_label }}" class="form-label">{{ form.content.label }}</label>
+                        {{ form.content }}
+                        {% if form.content.help_text %}
+                            <small class="form-text text-muted">{{ form.content.help_text }}</small>
+                        {% endif %}
+                        {% for error in form.content.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    {# Captcha is removed in the form for editing, so no need to render it here #}
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-save"></i> 保存更改
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center">
+                <a href="{% url 'message_list' %}">取消並返回留言列表</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Apply Bootstrap classes to form fields dynamically
+document.addEventListener('DOMContentLoaded', function() {
+    const fieldsToStyle = ['subject', 'content'];
+    fieldsToStyle.forEach(function(fieldName) {
+        const field = document.getElementById('id_' + fieldName);
+        if (field) {
+            field.classList.add('form-control');
+            const parentDiv = field.closest('div.mb-3'); // Find the parent div for error checking
+            if (parentDiv) {
+                const errorDiv = parentDiv.querySelector('.invalid-feedback.d-block');
+                if (errorDiv && errorDiv.textContent.trim() !== '') {
+                    field.classList.add('is-invalid');
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

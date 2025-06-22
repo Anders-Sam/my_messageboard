@@ -28,9 +28,19 @@ class MessageForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        is_editing = kwargs.pop('is_editing', False) # 檢查是否為編輯模式
         super().__init__(*args, **kwargs)
         self.fields['subject'].label = "主題"
         self.fields['content'].label = "留言內容"
+
+        if is_editing or self.instance and self.instance.pk: # 如果是編輯現有實例，則移除驗證碼
+            if 'captcha' in self.fields:
+                del self.fields['captcha']
+        # 更新 Meta 中的 fields 列表，如果驗證碼被移除
+        if 'captcha' not in self.fields and 'captcha' in self.Meta.fields:
+            meta_fields = list(self.Meta.fields)
+            meta_fields.remove('captcha')
+            self.Meta.fields = meta_fields
 
 
 class CustomUserCreationForm(UserCreationForm):

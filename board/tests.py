@@ -276,8 +276,87 @@ class MessageBoardTests(TestCase):
         # self.assertTrue(any('required' in e.code for e in form.errors['email']))
         self.assertTrue(form.errors['email'])
 
+    # 4. 留言編輯與刪除功能測試
+    def test_edit_message_view_get_as_author(self):
+        self.client.login(username=self.user_with_email.username, password='password123')
+        message_to_edit = Message.objects.create(author=self.user_with_email, subject="Original Subject", content="Original Content")
+        response = self.client.get(reverse('edit_message', args=[message_to_edit.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'board/edit_message.html')
+        self.assertIsInstance(response.context['form'], MessageForm)
+        self.assertEqual(response.context['form'].instance, message_to_edit)
 
-    # 4. 管理後台測試 (MessageAdmin)
+    def test_edit_message_view_get_as_non_author(self):
+        self.client.login(username=self.user_without_email.username, password='password123') # Different user
+        message_to_edit = Message.objects.create(author=self.user_with_email, subject="Other's Subject", content="Other's Content")
+        response = self.client.get(reverse('edit_message', args=[message_to_edit.id]), follow=True)
+        self.assertRedirects(response, reverse('message_list'))
+        messages = list(response.context.get('messages', []))
+        self.assertTrue(any("您沒有權限編輯此留言。" in str(m) for m in messages))
+
+    def test_edit_message_view_post_as_author(self):
+        self.client.login(username=self.user_with_email.username, password='password123')
+        message_to_edit = Message.objects.create(author=self.user_with_email, subject="Subject Before Edit", content="Content Before Edit", is_approved=True, notified=True)
+        updated_data = {
+            'subject': 'Subject After Edit',
+            'content': 'Content After Edit',
+            # Captcha is removed for editing in MessageForm's __init__
+        }
+        with self.settings(ADMINS=[('Admin', 'admin@example.com')]): # For mail_admins
+            response = self.client.post(reverse('edit_message', args=[message_to_edit.id]), data=updated_data, follow=True)
+
+        self.assertRedirects(response, reverse('message_list'))
+        message_to_edit.refresh_from_db()
+        self.assertEqual(message_to_edit.subject, 'Subject After Edit')
+        self.assertEqual(message_to_edit.content, 'Content After Edit')
+        self.assertFalse(message_to_edit.is_approved) # Should require re-approval
+        self.assertFalse(message_to_edit.notified)   # Notification status should be reset
+        messages = list(response.context.get('messages', []))
+        self.assertTrue(any("留言已成功修改，將等待管理員重新審核。" in str(m) for m in messages))
+        self.assertEqual(len(mail.outbox), 1) # mail_admins for re-approval
+        self.assertIn("【留言已修改待重審】", mail.outbox[0].subject)
+
+
+    def test_delete_message_view_get_confirm_as_author(self):
+        self.client.login(username=self.user_with_email.username, password='password123')
+        message_to_delete = Message.objects.create(author=self.user_with_email, subject="To Delete", content="Content to delete")
+        response = self.client.get(reverse('delete_message', args=[message_to_delete.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'board/delete_message_confirm.html')
+        self.assertEqual(response.context['message'], message_to_delete)
+
+    def test_delete_message_view_post_as_author(self):
+        self.client.login(username=self.user_with_email.username, password='password123')
+        message_to_delete = Message.objects.create(author=self.user_with_email, subject="Delete Me", content="Content")
+        message_id = message_to_delete.id
+        response = self.client.post(reverse('delete_message', args=[message_id]), follow=True)
+        self.assertRedirects(response, reverse('message_list'))
+        self.assertFalse(Message.objects.filter(id=message_id).exists())
+        messages = list(response.context.get('messages', []))
+        self.assertTrue(any('留言 "Delete Me" 已成功刪除。' in str(m) for m in messages))
+
+    def test_delete_message_view_post_as_non_author(self):
+        self.client.login(username=self.user_without_email.username, password='password123')
+        message_to_delete = Message.objects.create(author=self.user_with_email, subject="Safe Message", content="Content")
+        message_id = message_to_delete.id
+        response = self.client.post(reverse('delete_message', args=[message_id]), follow=True)
+        self.assertRedirects(response, reverse('message_list'))
+        self.assertTrue(Message.objects.filter(id=message_id).exists()) # Message should still exist
+        messages = list(response.context.get('messages', []))
+        self.assertTrue(any("您沒有權限刪除此留言。" in str(m) for m in messages))
+
+    def test_delete_message_view_post_as_staff(self):
+        self.client.login(username=self.superuser.username, password='password123') # Login as staff
+        message_to_delete = Message.objects.create(author=self.user_with_email, subject="Staff Deletable", content="Content")
+        message_id = message_to_delete.id
+        response = self.client.post(reverse('delete_message', args=[message_id]), follow=True)
+        self.assertRedirects(response, reverse('message_list'))
+        self.assertFalse(Message.objects.filter(id=message_id).exists())
+        messages = list(response.context.get('messages', []))
+        self.assertTrue(any('留言 "Staff Deletable" 已成功刪除。' in str(m) for m in messages))
+
+
+    # 5. 管理後台測試 (MessageAdmin) - Renumbered from 4
     def test_admin_message_action_mark_approved_and_notify(self):
         self.client.login(username=self.superuser.username, password='password123')
         self.assertFalse(self.pending_message.is_approved)

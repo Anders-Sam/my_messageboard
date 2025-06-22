@@ -28,8 +28,10 @@ urlpatterns = [
     path('accounts/password_reset/done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'), # 密碼重設郵件已發送
     path('accounts/reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'), # 密碼重設確認
     path('accounts/reset/done/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'), # 密碼重設完成
-    path('accounts/signup/', board_views.signup, name='signup'), # 註冊，假設在 board.views 中實現 signup 視圖
+    path('accounts/signup/', board_views.signup, name='signup'), # 註冊
     path('', board_views.message_list, name='message_list'), # 留言列表頁
     path('post/', board_views.post_message, name='post_message'), # 發布留言頁
+    path('message/<int:message_id>/edit/', board_views.edit_message, name='edit_message'), # 編輯留言頁
+    path('message/<int:message_id>/delete/', board_views.delete_message, name='delete_message'), # 刪除留言頁
     path('captcha/', include('captcha.urls')), # 驗證碼 URL
 ]
