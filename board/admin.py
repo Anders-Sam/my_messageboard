@@ -85,10 +85,10 @@ class MessageAdmin(admin.ModelAdmin):
         custom_urls = [
             path('<int:message_id>/approve/',
                  self.admin_site.admin_view(self.approve_message_view),
-                 name=f'{info[0]}_{info[1]}_approve'),
+                 name=f'{info[0]}_{info[1]}_approve'), # Keep this as is, it's used by opts|admin_urlname:'approve'
             path('approve_all_pending/',
                  self.admin_site.admin_view(self.approve_all_pending_view),
-                 name=f'{info[0]}_{info[1]}_approve_all_pending'),
+                 name='approve_all_pending'), # Revert this to the shorter name
         ]
         return custom_urls + urls
 
