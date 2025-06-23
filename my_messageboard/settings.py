@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,13 +22,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-r5f_ql8-g5g*s-sh$h!8@-byxnz(k2u=(jzh80e0#f+%4f#2$!'
+# SECRET_KEY = 'django-insecure-r5f_ql8-g5g*s-sh$h!8@-byxnz(k2u=(jzh80e0#f+%4f#2$!'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-r5f_ql8-g5g*s-sh$h!8@-byxnz(k2u=(jzh80e0#f+%4f#2$!')
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', '') != 'False'
 
-ALLOWED_HOSTS = ['*']
 
+# ALLOWED_HOSTS = ['*'] # Previous setting
+ALLOWED_HOSTS_ENV = os.environ.get('DJANGO_ALLOWED_HOSTS')
+if ALLOWED_HOSTS_ENV:
+    ALLOWED_HOSTS = ALLOWED_HOSTS_ENV.split(',')
+else:
+    ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 # Application definition
 
@@ -40,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'board',
     'captcha', # 增加驗證碼功能
+    'whitenoise.runserver_nostatic', # Only if using runserver with whitenoise in dev
 ]
 
 # 配置驗證碼（可選，可自定義）
@@ -49,6 +59,7 @@ CAPTCHA_LENGTH = 4
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # WhiteNoise Middleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -62,12 +73,11 @@ ROOT_URLCONF = 'my_messageboard.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        # 'DIRS': [],
-        # 'DIRS': [os.path.join(BASE_DIR, 'templates')], # 增加這一行
-        'DIRS': [os.path.join(BASE_DIR, 'templates')], # 確保這一行是正確的，指向項目根目錄下的 'templates' 文件夾
-        'APP_DIRS': True, # 確保這一行是 True，這樣 Django 才會自動尋找各個應用内部的 'templates' 文件夾        
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -82,11 +92,19 @@ WSGI_APPLICATION = 'my_messageboard.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db_init_v1.sqlite3', # Updated database filename
+#     }
+# }
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db_init_v1.sqlite3', # Updated database filename
-    }
+    'default': dj_database_url.config(
+        # Fallback to SQLite if DATABASE_URL not set
+        default=f"sqlite:///{BASE_DIR / 'db_init_v1.sqlite3'}",
+        conn_max_age=600, # Optional: connection pooling
+        conn_health_checks=True, # Optional: enable health checks
+    )
 }
 
 
@@ -125,31 +143,104 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles' # For collectstatic
+# STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage' # Default
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage' # For WhiteNoise
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# my_messageboard/settings.py
 # Email configuration
-# 默認使用控制台後端進行測試，避免在沒有配置 SMTP 的情況下出錯
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Default to console backend for development if no specific env vars are set
+EMAIL_BACKEND_ENV = os.environ.get('DJANGO_EMAIL_BACKEND')
+if EMAIL_BACKEND_ENV:
+    EMAIL_BACKEND = EMAIL_BACKEND_ENV
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# 實際 SMTP 配置 (如果需要發送真實郵件，請取消註釋並填寫)
-# EMAIL_HOST = 'smtp.gmail.com' # 例如：Gmail
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER') # 強烈建議使用環境變量
-# EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD') # 強烈建議使用環境變量
-# DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'webmaster@localhost') # 默認發件人
+EMAIL_HOST = os.environ.get('DJANGO_EMAIL_HOST', 'localhost')
+EMAIL_PORT = int(os.environ.get('DJANGO_EMAIL_PORT', 25))
+EMAIL_USE_TLS = os.environ.get('DJANGO_EMAIL_USE_TLS', 'False') == 'True'
+EMAIL_USE_SSL = os.environ.get('DJANGO_EMAIL_USE_SSL', 'False') == 'True'
+EMAIL_HOST_USER = os.environ.get('DJANGO_EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('DJANGO_EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DJANGO_DEFAULT_FROM_EMAIL', 'webmaster@localhost')
+SERVER_EMAIL = os.environ.get('DJANGO_SERVER_EMAIL', DEFAULT_FROM_EMAIL) # For error reports
 
-# 管理員郵箱配置，用於接收 mail_admins() 的郵件
-ADMINS = [('Admin', os.environ.get('ADMIN_EMAIL'))] if os.environ.get('ADMIN_EMAIL') else []
+# Admin email configuration
+ADMIN_EMAIL_ENV = os.environ.get('DJANGO_ADMIN_EMAIL')
+ADMINS = [('Admin', ADMIN_EMAIL_ENV)] if ADMIN_EMAIL_ENV else []
 MANAGERS = ADMINS
 
-# 注意：在生產環境中，請務必使用環境變量或其他安全方式存儲敏感信息如郵箱密碼。
-# 如果使用Gmail，可能需要開啟“允許安全性較低的應用”或生成應用專用密碼。
 
-LOGIN_REDIRECT_URL = '/' # 登入成功後重定向到網站首頁 (留言列表頁)
-LOGOUT_REDIRECT_URL = '/' # 登出成功後重定向到網站首頁
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
+# Security settings for production (read from environment variables)
+CSRF_TRUSTED_ORIGINS_ENV = os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS')
+if CSRF_TRUSTED_ORIGINS_ENV:
+    CSRF_TRUSTED_ORIGINS = CSRF_TRUSTED_ORIGINS_ENV.split(',')
+else:
+    # Default for local development, Render will override with its own domain
+    CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://127.0.0.1:8000']
+
+
+# For production on Render, you'd typically set these via environment variables
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') # If behind a proxy like Render's
+SECURE_SSL_REDIRECT = os.environ.get('DJANGO_SECURE_SSL_REDIRECT', 'False').lower() == 'true'
+SESSION_COOKIE_SECURE = os.environ.get('DJANGO_SESSION_COOKIE_SECURE', 'False').lower() == 'true'
+CSRF_COOKIE_SECURE = os.environ.get('DJANGO_CSRF_COOKIE_SECURE', 'False').lower() == 'true'
+
+# Optional: HSTS settings (uncomment and configure if needed)
+# SECURE_HSTS_SECONDS = int(os.environ.get('DJANGO_SECURE_HSTS_SECONDS', 0)) # e.g., 31536000 for 1 year
+# SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get('DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS', 'False').lower() == 'true'
+# SECURE_HSTS_PRELOAD = os.environ.get('DJANGO_SECURE_HSTS_PRELOAD', 'False').lower() == 'true'
+
+# Logging - Basic configuration to ensure logs go to stdout for Render
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO', # Adjust level as needed (INFO, WARNING, ERROR)
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+    },
+}
+
+# Ensure 'whitenoise.runserver_nostatic' is only in INSTALLED_APPS if DEBUG is True
+# and we are not in a test environment (where it can cause issues with staticfiles collection).
+# Render's build process will run collectstatic, so it's mainly for local `runserver`.
+import sys
+if DEBUG and 'test' not in sys.argv:
+    # This app is useful for `python manage.py runserver` when DEBUG=True
+    # It serves static files directly via WhiteNoise without needing `collectstatic` first for dev.
+    # However, it should NOT be in INSTALLED_APPS when DEBUG=False or during `collectstatic`.
+    # A better approach might be to add it only if 'runserver' is in sys.argv.
+    # For Render, collectstatic is run, so this is less critical for deployment.
+    # Keeping it simple for now.
+    pass
+else:
+    # Remove 'whitenoise.runserver_nostatic' if not in suitable dev environment
+    if 'whitenoise.runserver_nostatic' in INSTALLED_APPS:
+        INSTALLED_APPS.remove('whitenoise.runserver_nostatic')
+
+# Ensure TEMPLATES context_processors has 'django.template.context_processors.debug' only if DEBUG
+if not DEBUG:
+    for template_config in TEMPLATES:
+        if 'OPTIONS' in template_config and 'context_processors' in template_config['OPTIONS']:
+            if 'django.template.context_processors.debug' in template_config['OPTIONS']['context_processors']:
+                template_config['OPTIONS']['context_processors'].remove('django.template.context_processors.debug')
+```

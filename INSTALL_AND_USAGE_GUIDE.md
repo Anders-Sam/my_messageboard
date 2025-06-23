@@ -57,15 +57,13 @@
 
 ### 3.3. 安裝項目依賴
 
-項目依賴項已在 `README.md` 中提及，主要包括 Django、django-simple-captcha 和 Pillow。
+項目依賴項已在 `requirements.txt` 文件中列出。
 
+如果您有 `requirements.txt` 文件 (項目根目錄應包含此文件)，請使用以下命令安裝所有依賴：
 ```bash
-pip install Django django-simple-captcha Pillow
+pip install -r requirements.txt
 ```
-如果您有 `requirements.txt` 文件 (通常包含所有依賴)，可以使用：
-```bash
-pip install -r requirements.txt # 假設 requirements.txt 存在於項目根目錄
-```
+這將安裝 Django、django-simple-captcha、Pillow 以及部署到 Render 所需的額外包（如 gunicorn, dj_database_url, psycopg2-binary, whitenoise）。
 
 ### 3.4. 配置郵件服務 (可選，用於郵件通知功能)
 
@@ -208,4 +206,63 @@ deactivate
     *   檢查網絡連接和防火牆設置，確保可以訪問 SMTP 服務器和端口。
 
 本指南提供了基本的安裝和使用流程。根據您的具體環境，可能需要進行額外的調整。
+
+## 8. 部署到 Render.com (示例)
+
+以下是將此項目部署到 Render.com 的一些關鍵步驟和注意事項。
+
+### 8.1. 準備工作 (已在前面步驟中部分完成)
+
+*   **`requirements.txt`**: 確保已包含 `gunicorn`, `dj_database_url`, `psycopg2-binary`, `whitenoise`。
+*   **`Procfile`**: 項目根目錄下應有 `Procfile`，內容類似：
+    ```
+    web: gunicorn my_messageboard.wsgi --log-file - --log-level info
+    release: python manage.py migrate
+    ```
+*   **`runtime.txt` (可選)**: 如果您希望指定 Python 版本，例如：
+    ```
+    python-3.11.4
+    ```
+*   **`settings.py`**: 已針對生產環境進行了調整，以從環境變量讀取敏感配置，並配置了數據庫 (優先使用 `DATABASE_URL`) 和靜態文件 (WhiteNoise)。
+
+### 8.2. Render 服務配置
+
+1.  **創建 Render 帳戶並登入**。
+2.  **新建 Web Service**：
+    *   選擇從您的 Git 倉庫 (例如 GitHub) 部署。
+    *   連接到包含此項目的倉庫。
+3.  **配置服務**：
+    *   **名稱**: 給您的服務起一個名字。
+    *   **Region**: 選擇服務器區域。
+    *   **Branch**: 選擇要部署的分支 (例如 `main` 或 `master`)。
+    *   **Root Directory**: 通常留空 (如果 `requirements.txt`, `Procfile` 等在倉庫根目錄)。
+    *   **Runtime**: Render 通常能自動檢測到 Python。如果創建了 `runtime.txt`，它會使用指定的版本。
+    *   **Build Command**: Render 通常會自動填充為類似 `pip install -r requirements.txt && python manage.py collectstatic --noinput --clear`。您可以根據需要調整，但 `python manage.py migrate` 已由 `Procfile` 中的 `release` 階段處理。
+    *   **Start Command**: Render 會自動從 `Procfile` 讀取 `web` 進程的命令，即 `gunicorn my_messageboard.wsgi --log-file - --log-level info`。
+4.  **添加數據庫 (推薦)**：
+    *   在 Render 上創建一個 PostgreSQL 數據庫實例。
+    *   創建後，Render 會提供一個 `DATABASE_URL` (內部連接字符串)。
+    *   將此 `DATABASE_URL` 添加到您的 Web Service 的環境變量中。`settings.py` 中的 `dj_database_url.config()` 會自動使用它。
+    *   **重要**: SQLite 不適用於 Render 的生產環境，因為其文件系統是臨時的，數據會在重啟或重新部署時丟失。**務必使用 Render 提供的 PostgreSQL 或類似的持久化數據庫服務。**
+5.  **設置環境變量**:
+    *   在 Render 服務的 "Environment" 選項卡中，添加所有必要的環境變量，例如：
+        *   `DJANGO_SECRET_KEY`: 一個長而隨機的字符串 (不要使用開發時的默認值)。
+        *   `DJANGO_DEBUG`: 設置為 `False`。
+        *   `DJANGO_ALLOWED_HOSTS`: 您的 Render 應用域名 (例如 `your-app-name.onrender.com`) 以及任何自定義域名，用逗號分隔。
+        *   `DATABASE_URL`: (如果使用 Render 的數據庫，它可能會自動注入，或者您需要從數據庫服務的設置中複製過來)。
+        *   `DJANGO_CSRF_TRUSTED_ORIGINS`: 您的應用程序將通過 HTTPS 訪問的域名，例如 `https://your-app-name.onrender.com`。
+        *   `DJANGO_SECURE_SSL_REDIRECT`: 設置為 `True` (如果 Render 配置了自動 HTTPS)。
+        *   `DJANGO_SESSION_COOKIE_SECURE`: 設置為 `True`。
+        *   `DJANGO_CSRF_COOKIE_SECURE`: 設置為 `True`。
+        *   郵件相關環境變量 ( `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_HOST_PASSWORD`, `DJANGO_DEFAULT_FROM_EMAIL` 等)，如果您希望郵件功能在生產中工作。
+        *   `DJANGO_ADMIN_EMAIL`: 用於管理員通知和“聯絡管理員”功能。
+6.  **部署**: 保存配置後，Render 將開始構建和部署您的應用。您可以在 "Events" 或 "Logs" 中查看部署進度。
+
+### 8.3. 部署後檢查
+
+*   訪問您的 Render 應用 URL，檢查網站是否正常運行。
+*   測試用戶註冊、登入、發布留言、管理後台等功能。
+*   檢查日誌中是否有錯誤。
+
+以上是部署到 Render 的大致流程和關鍵配置。具體細節可能會因 Render 平台的更新而略有變化，建議同時參考 Render 的官方文檔。
 ```
