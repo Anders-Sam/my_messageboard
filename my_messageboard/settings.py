@@ -243,4 +243,3 @@ if not DEBUG:
         if 'OPTIONS' in template_config and 'context_processors' in template_config['OPTIONS']:
             if 'django.template.context_processors.debug' in template_config['OPTIONS']['context_processors']:
                 template_config['OPTIONS']['context_processors'].remove('django.template.context_processors.debug')
-```
