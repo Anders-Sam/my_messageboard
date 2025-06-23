@@ -49,9 +49,14 @@ def message_list(request):
     # 檢查是否有留言，用於模板中顯示提示信息
     has_messages = message_list_qs.exists()
 
+    admin_email = None
+    if settings.ADMINS and settings.ADMINS[0] and isinstance(settings.ADMINS[0], tuple) and len(settings.ADMINS[0]) > 1:
+        admin_email = settings.ADMINS[0][1] # (Name, Email)
+
     return render(request, 'board/message_list.html', {
         'page_obj': page_obj,
         'has_messages': has_messages,
+        'admin_contact_email': admin_email,
     })
 
 # 發布留言視圖
@@ -87,4 +92,70 @@ def post_message(request):
     else:
         form = MessageForm() # GET 請求時，創建空表單
     return render(request, 'board/post_message.html', {'form': form})
+
+@login_required
+def edit_message(request, message_id):
+    try:
+        message = Message.objects.get(pk=message_id)
+    except Message.DoesNotExist:
+        messages.error(request, "找不到指定的留言。")
+        return redirect('message_list')
+
+    if message.author != request.user:
+        messages.error(request, "您沒有權限編輯此留言。")
+        return redirect('message_list')
+
+    if request.method == 'POST':
+        # 傳遞 is_editing=True 以移除驗證碼
+        form = MessageForm(request.POST, instance=message, is_editing=True)
+        if form.is_valid():
+            edited_message = form.save(commit=False)
+            edited_message.is_approved = False # 修改後需要重新審核
+            edited_message.notified = False    # 重置通知狀態
+            edited_message.save()
+            messages.success(request, '留言已成功修改，將等待管理員重新審核。')
+
+            # 通知管理員有留言被修改並待審核
+            try:
+                admin_url = request.build_absolute_uri(reverse('admin:board_message_change', args=[edited_message.pk]))
+                mail_admins(
+                    subject=f"【留言已修改待重審】{edited_message.subject}",
+                    message=f"使用者 {request.user.username} 修改了他們的留言，需要重新審核。\n\n"
+                            f"主題: {edited_message.subject}\n"
+                            f"內容: {edited_message.content[:200]}...\n\n"
+                            f"請點擊以下鏈接進行審核:\n{admin_url}",
+                    fail_silently=True
+                )
+            except Exception as e:
+                print(f"Error sending admin notification email for edited message: {e}")
+
+            return redirect('message_list')
+        else:
+            messages.error(request, '表單提交失敗，請檢查您輸入的內容。')
+    else:
+        # 傳遞 is_editing=True 以移除驗證碼
+        form = MessageForm(instance=message, is_editing=True)
+
+    return render(request, 'board/edit_message.html', {'form': form, 'message': message})
+
+@login_required
+def delete_message(request, message_id):
+    try:
+        message = Message.objects.get(pk=message_id)
+    except Message.DoesNotExist:
+        messages.error(request, "找不到指定的留言。")
+        return redirect('message_list')
+
+    # 允許作者或管理員刪除
+    if not (message.author == request.user or request.user.is_staff):
+        messages.error(request, "您沒有權限刪除此留言。")
+        return redirect('message_list')
+
+    if request.method == 'POST':
+        subject = message.subject # Store subject for message before deleting
+        message.delete()
+        messages.success(request, f'留言 "{subject}" 已成功刪除。')
+        return redirect('message_list')
+
+    return render(request, 'board/delete_message_confirm.html', {'message': message})
 # Create your views here.
