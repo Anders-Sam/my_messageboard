@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: my-messageboard
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py migrate && gunicorn my_messageboard.wsgi --log-file - --log-level info
+    envVars:
+      - key: ALLOWED_HOSTS
+        value: my-messageboard.onrender.com
+      - key: DATABASE_URL
+        value: postgresql://postgresql_my_messageboard_gtof_user:6Ysb9ZUzxrEXtXpZxz3kUleuEHkErRFJ@dpg-d1d1j6emcj7s73faddd0-a/postgresql_my_messageboard_gtof
+      - key: DEBUG
+        value: False
